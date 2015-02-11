@@ -825,10 +825,27 @@ Future<Docker::Image> Docker::_pull(
     const string& image,
     const string& path)
 {
-  Option<int> status = s.status().get();
-  if (status.isSome() && status.get() == 0) {
-    return io::read(s.out().get())
-      .then(lambda::bind(&Docker::___pull, lambda::_1));
+
+
+  // See if the image ends with "latest". If not, check the
+  // status of inspect and skip pulling if found. Otherwise,
+  // always pull. -- hps
+  std::size_t pos = image.rfind("latest");
+
+  VLOG(1) << "*** DEBUG - Images is     " << image;
+  VLOG(1) << "*** DEBUG - last index is " << image.length() - 1;
+  VLOG(1) << "*** DEBUG - pos is        " << pos;
+
+  if (pos == std::string::npos || pos != image.length() - 1) {
+    VLOG(1) << "*** DEBUG - do the status dance";
+    Option<int> status = s.status().get();
+    if (status.isSome() && status.get() == 0) {
+      return io::read(s.out().get())
+        .then(lambda::bind(&Docker::___pull, lambda::_1));
+    }
+  }
+  else {
+    VLOG(1) << "*** DEBUG - do a pull";
   }
 
   vector<string> argv;
