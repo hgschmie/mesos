@@ -256,6 +256,8 @@ Try<Docker::Container> Docker::Container::create(const JSON::Object& json)
     return Error("IPAddress in NetworkSettings is not string type");
   }
 
+  LOG(INFO) << "*** DEBUG *** - IP Address:    " << ipAddress;
+
   entry = networkSettingsValue.as<JSON::Object>().values.find("Gateway");
   if (entry == json.values.end()) {
     return Error("Unable to find Gateway in NetworkSettings");
@@ -265,6 +267,8 @@ Try<Docker::Container> Docker::Container::create(const JSON::Object& json)
   if (!gateway.is<JSON::String>()) {
     return Error("Gateway in NetworkSettings is not string type");
   }
+
+  LOG(INFO) << "*** DEBUG *** - Gateway:       " << gateway;
 
   entry = networkSettingsValue.as<JSON::Object>().values.find("Bridge");
   if (entry == json.values.end()) {
@@ -276,6 +280,8 @@ Try<Docker::Container> Docker::Container::create(const JSON::Object& json)
     return Error("Bridge in NetworkSettings is not string type");
   }
 
+  LOG(INFO) << "*** DEBUG *** - Bridge:        " << bridge;
+
   entry = networkSettingsValue.as<JSON::Object>().values.find("IPPrefixLen");
   if (entry == json.values.end()) {
     return Error("Unable to find IPPrefixLen in NetworkSettings");
@@ -286,6 +292,8 @@ Try<Docker::Container> Docker::Container::create(const JSON::Object& json)
     return Error("IPPrefixLen in NetworkSettings is not number type");
   }
 
+  LOG(INFO) << "*** DEBUG *** - IP Prefix Len: " << ipPrefixLen;
+
   entry = networkSettingsValue.as<JSON::Object>().values.find("MacAddress");
   if (entry == json.values.end()) {
     return Error("Unable to find MacAddress in NetworkSettings");
@@ -295,6 +303,8 @@ Try<Docker::Container> Docker::Container::create(const JSON::Object& json)
   if (!macAddress.is<JSON::String>()) {
     return Error("MacAddress in NetworkSettings is not string type");
   }
+
+  LOG(INFO) << "*** DEBUG *** - MAC Address:   " << macAddress;
 
   return Docker::Container(id, name, optionalPid, ipAddress.as<JSON::String>().value, gateway.as<JSON::String>().value, bridge.as<JSON::String>().value, ipPrefixLen.as<JSON::Number>().value, macAddress.as<JSON::String>().value);
 }
@@ -682,6 +692,8 @@ Future<Docker::Container> Docker::__inspect(const string& output)
     CHECK(array.values.front().is<JSON::Object>());
     Try<Docker::Container> container =
       Docker::Container::create(array.values.front().as<JSON::Object>());
+
+    LOG(INFO) << "*** Debug *** -  Container created";
 
     if (container.isError()) {
       return Failure("Unable to create container: " + container.error());

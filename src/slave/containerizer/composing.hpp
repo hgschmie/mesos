@@ -82,6 +82,9 @@ public:
   virtual process::Future<ResourceStatistics> usage(
       const ContainerID& containerId);
 
+  virtual process::Future<ContainerNetworkSettings> network_settings(
+      const ContainerID& containerId);
+
   virtual process::Future<containerizer::Termination> wait(
       const ContainerID& containerId);
 

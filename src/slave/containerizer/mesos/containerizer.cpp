@@ -249,6 +249,13 @@ Future<Nothing> MesosContainerizer::update(
 }
 
 
+Future<ContainerNetworkSettings> MesosContainerizer::network_settings(
+    const ContainerID& containerId)
+{
+  return dispatch(process, &MesosContainerizerProcess::network_settings, containerId);
+}
+
+
 Future<ResourceStatistics> MesosContainerizer::usage(
     const ContainerID& containerId)
 {
@@ -929,6 +936,18 @@ Future<ResourceStatistics> MesosContainerizerProcess::usage(
           _usage, containerId, resources.get(containerId), lambda::_1));
 }
 
+
+Future<ContainerNetworkSettings> MesosContainerizerProcess::network_settings(
+    const ContainerID& containerId)
+{
+  if (!promises.contains(containerId)) {
+    return Failure("Unknown container: " + stringify(containerId));
+  }
+
+  ContainerNetworkSettings settings;
+  // dummy
+  return settings;
+}
 
 void MesosContainerizerProcess::destroy(const ContainerID& containerId)
 {

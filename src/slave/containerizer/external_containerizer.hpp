@@ -109,6 +109,9 @@ public:
   virtual process::Future<ResourceStatistics> usage(
       const ContainerID& containerId);
 
+  virtual process::Future<ContainerNetworkSettings> network_settings(
+      const ContainerID& containerId);
+
   virtual process::Future<containerizer::Termination> wait(
       const ContainerID& containerId);
 
@@ -149,6 +152,8 @@ public:
 
   // Gather resource usage statistics for the containerized executor.
   process::Future<ResourceStatistics> usage(const ContainerID& containerId);
+
+  process::Future<ContainerNetworkSettings> network_settings(const ContainerID& containerId);
 
   // Get a future on the containerized executor's Termination.
   process::Future<containerizer::Termination> wait(

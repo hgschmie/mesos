@@ -82,6 +82,9 @@ public:
   Future<ResourceStatistics> usage(
       const ContainerID& containerId);
 
+  Future<ContainerNetworkSettings> network_settings(
+      const ContainerID& containerId);
+
   Future<containerizer::Termination> wait(
       const ContainerID& containerId);
 
@@ -220,6 +223,11 @@ Future<ResourceStatistics> ComposingContainerizer::usage(
   return dispatch(process, &ComposingContainerizerProcess::usage, containerId);
 }
 
+Future<ContainerNetworkSettings> ComposingContainerizer::network_settings(
+    const ContainerID& containerId)
+{
+  return dispatch(process, &ComposingContainerizerProcess::network_settings, containerId);
+}
 
 Future<containerizer::Termination> ComposingContainerizer::wait(
     const ContainerID& containerId)
@@ -495,6 +503,16 @@ Future<ResourceStatistics> ComposingContainerizerProcess::usage(
   return containers_[containerId]->containerizer->usage(containerId);
 }
 
+
+Future<ContainerNetworkSettings> ComposingContainerizerProcess::network_settings(
+    const ContainerID& containerId)
+{
+  if (!containers_.contains(containerId)) {
+    return Failure("Container '" + containerId.value() + "' not found");
+  }
+
+  return containers_[containerId]->containerizer->network_settings(containerId);
+}
 
 Future<containerizer::Termination> ComposingContainerizerProcess::wait(
     const ContainerID& containerId)

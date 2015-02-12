@@ -218,6 +218,11 @@ Future<ResourceStatistics> ExternalContainerizer::usage(
   return dispatch(process, &ExternalContainerizerProcess::usage, containerId);
 }
 
+Future<ContainerNetworkSettings> ExternalContainerizer::network_settings(
+    const ContainerID& containerId)
+{
+  return dispatch(process, &ExternalContainerizerProcess::network_settings, containerId);
+}
 
 Future<containerizer::Termination> ExternalContainerizer::wait(
     const ContainerID& containerId)
@@ -860,6 +865,18 @@ Future<ResourceStatistics> ExternalContainerizerProcess::__usage(
   return statistics.get();
 }
 
+
+Future<ContainerNetworkSettings> ExternalContainerizerProcess::network_settings(
+    const ContainerID& containerId)
+{
+  if (!actives.contains(containerId)) {
+    return Failure("Container '" + containerId.value() + "' not running");
+  }
+
+  ContainerNetworkSettings settings;
+  // dummy
+  return settings;
+}
 
 void ExternalContainerizerProcess::destroy(const ContainerID& containerId)
 {

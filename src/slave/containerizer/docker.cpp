@@ -1418,7 +1418,8 @@ Future<ResourceStatistics> DockerContainerizerProcess::usage(
 
   // Skip inspecting the docker container if we already have the pid.
   if (container->pid.isSome()) {
-    return __usage(containerId, container->pid.get());
+    LOG(INFO) << "*** Debug *** - would be skipping pid. Won't.";
+    // return __usage(containerId, container->pid.get());
   }
 
   return docker->inspect(container->name())
