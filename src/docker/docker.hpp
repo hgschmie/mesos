@@ -139,6 +139,11 @@ protected:
   Docker(const std::string& _path) : path(_path) {};
 
 private:
+  process::Future<Image> pull_internal(
+      const std::string& directory,
+      const std::string& image,
+      const bool recheck) const;
+
   static process::Future<Nothing> _kill(
       const Docker& docker,
       const std::string& container,
@@ -170,7 +175,8 @@ private:
       const process::Subprocess& s,
       const std::string& directory,
       const std::string& image,
-      const std::string& path);
+      const std::string& path,
+      const bool recheck);
 
   static process::Future<Image> __pull(
       const Docker& docker,

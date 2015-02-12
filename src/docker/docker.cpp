@@ -842,6 +842,14 @@ Future<Docker::Image> Docker::pull(
     const string& directory,
     const string& image) const
 {
+  return pull_internal(directory, image, false);
+}
+
+Future<Docker::Image> Docker::pull_internal(
+    const string& directory,
+    const string& image,
+    const bool recheck) const
+{
   vector<string> argv;
 
   string dockerImage = image;
@@ -886,7 +894,8 @@ Future<Docker::Image> Docker::pull(
         s.get(),
         directory,
         dockerImage,
-        path));
+        path,
+        recheck));
 }
 
 
@@ -895,7 +904,8 @@ Future<Docker::Image> Docker::_pull(
     const Subprocess& s,
     const string& directory,
     const string& image,
-    const string& path)
+    const string& path,
+    const bool recheck)
 {
 
 
@@ -904,12 +914,14 @@ Future<Docker::Image> Docker::_pull(
   // always pull. -- hps
   std::size_t pos = image.rfind("latest");
 
-  VLOG(1) << "*** DEBUG - Images is     " << image;
-  VLOG(1) << "*** DEBUG - last index is " << image.length() - 1;
-  VLOG(1) << "*** DEBUG - pos is        " << pos;
+  LOG(INFO) << "*** DEBUG *** - Images is     " << image;
+  LOG(INFO) << "*** DEBUG *** - last index is " << image.length() - 1;
+  LOG(INFO) << "*** DEBUG *** - pos is        " << pos;
+  LOG(INFO) << "*** DEBUG *** - recheck is    " << recheck;
 
-  if (pos == std::string::npos || pos != image.length() - 1) {
-    VLOG(1) << "*** DEBUG - do the status dance";
+  // recheck tells that this is the second time around.
+  if (recheck || pos == std::string::npos || pos != image.length() - 6) {
+    LOG(INFO) << "*** DEBUG *** *** DEBUG - do the status dance";
     Option<int> status = s.status().get();
     if (status.isSome() && status.get() == 0) {
       return io::read(s.out().get())
@@ -989,7 +1001,9 @@ Future<Docker::Image> Docker::__pull(
   // the image should be present (see Docker::pull).
   // TODO(benh): Factor out inspect code from Docker::pull to be
   // reused rather than this (potentially infinite) recursive call.
-  return docker.pull(directory, image);
+  //
+  // set the recheck flag so that the inspect is no longer skipped.
+  return docker.pull_internal(directory, image, true);
 }
 
 
