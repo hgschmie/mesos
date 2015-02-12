@@ -5,7 +5,7 @@
   <groupId>org.apache.mesos</groupId>
   <artifactId>mesos</artifactId>
   <name>mesos</name>
-  <version>@PACKAGE_VERSION@</version>
+  <version>@PACKAGE_VERSION@-GRPN-1</version>
   <description>The Apache Mesos Java API jar.</description>
   <url>http://mesos.apache.org</url>
   <scm>
