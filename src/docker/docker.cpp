@@ -937,7 +937,7 @@ Future<Docker::Image> Docker::_pull(
   // See if the image ends with "latest". If not, check the
   // status of inspect and skip pulling if found. Otherwise,
   // always pull. -- hps
-  std::size_t pos = image.rfind("latest");
+  std::size_t pos = image.rfind(":latest");
 
   LOG(INFO) << "*** DEBUG *** - Images is     " << image;
   LOG(INFO) << "*** DEBUG *** - last index is " << image.length() - 1;
@@ -945,7 +945,7 @@ Future<Docker::Image> Docker::_pull(
   LOG(INFO) << "*** DEBUG *** - recheck is    " << recheck;
 
   // recheck tells that this is the second time around.
-  if (recheck || pos == std::string::npos || pos != image.length() - 6) {
+  if (recheck || pos == std::string::npos || pos != image.length() - 7) {
     LOG(INFO) << "*** DEBUG *** *** DEBUG - do the status dance";
     Option<int> status = s.status().get();
     if (status.isSome() && status.get() == 0) {
