@@ -201,6 +201,10 @@ private:
       const Resources& resources,
       pid_t pid);
 
+  Future<ContainerNetworkSettings> _network_settings(
+    const ContainerID& containerId,
+    const Docker::Container& docker_container);
+
   Future<ResourceStatistics> _usage(
       const ContainerID& containerId,
       const Docker::Container& container);
@@ -1257,7 +1261,7 @@ Future<Nothing> DockerContainerizerProcess::_update(
   container->gateway = docker_container.gateway;
   container->bridge = docker_container.bridge;
   container->ip_prefix_len = docker_container.ip_prefix_len;
-  container->mac_address = docker_container.ip_address;
+  container->mac_address = docker_container.mac_address;
 
   LOG(INFO) << "*** DEBUG *** - IP Address:    " << container->ip_address;
   LOG(INFO) << "*** DEBUG *** - Gateway:       " << container->gateway;
@@ -1418,8 +1422,7 @@ Future<ResourceStatistics> DockerContainerizerProcess::usage(
 
   // Skip inspecting the docker container if we already have the pid.
   if (container->pid.isSome()) {
-    LOG(INFO) << "*** Debug *** - would be skipping pid. Won't.";
-    // return __usage(containerId, container->pid.get());
+    return __usage(containerId, container->pid.get());
   }
 
   return docker->inspect(container->name())
@@ -1500,6 +1503,35 @@ Future<ContainerNetworkSettings> DockerContainerizerProcess::network_settings(
     return Failure("Container is being removed: " + stringify(containerId));
   }
 
+  return docker->inspect(container->name())
+    .then(defer(self(), &Self::_network_settings, containerId, lambda::_1));
+#endif
+}
+
+Future<ContainerNetworkSettings> DockerContainerizerProcess::_network_settings(
+    const ContainerID& containerId,
+    const Docker::Container& docker_container)
+{
+  Container* container = containers_[containerId];
+
+  if (container->state == Container::DESTROYING) {
+    return Failure("Container is being removed: " + stringify(containerId));
+  }
+
+  // Update the network information
+  container->ip_address = docker_container.ip_address;
+  container->gateway = docker_container.gateway;
+  container->bridge = docker_container.bridge;
+  container->ip_prefix_len = docker_container.ip_prefix_len;
+  container->mac_address = docker_container.mac_address;
+
+  LOG(INFO) << "--- winning!!! ---";
+  LOG(INFO) << "*** DEBUG *** - IP Address:    " << container->ip_address;
+  LOG(INFO) << "*** DEBUG *** - Gateway:       " << container->gateway;
+  LOG(INFO) << "*** DEBUG *** - Bridge:        " << container->bridge;
+  LOG(INFO) << "*** DEBUG *** - IP Prefix Len: " << container->ip_prefix_len;
+  LOG(INFO) << "*** DEBUG *** - MAC Address:   " << container->mac_address;
+
   ContainerNetworkSettings settings;
   settings.set_bridge(container->bridge);
   settings.set_gateway(container->gateway);
@@ -1508,7 +1540,6 @@ Future<ContainerNetworkSettings> DockerContainerizerProcess::network_settings(
   settings.set_mac_address(container->mac_address);
 
   return settings;
-#endif
 }
 
 Future<containerizer::Termination> DockerContainerizerProcess::wait(

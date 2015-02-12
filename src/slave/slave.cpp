@@ -1964,14 +1964,14 @@ void Slave::registerExecutor(
       // TODO(idownes): Wait until this completes.
       containerizer->update(executor->containerId, executor->resources);
 
-      ContainerNetworkSettings settings = containerizer->network_settings(executor->containerId).get();
+      // ContainerNetworkSettings settings = containerizer->network_settings(executor->containerId).get();
 
-      LOG(INFO) << "*** DEBUG *** - almost there -- ";
-      LOG(INFO) << "*** DEBUG *** - IP Address:    " << settings.ip_address();
-      LOG(INFO) << "*** DEBUG *** - Gateway:       " << settings.gateway();
-      LOG(INFO) << "*** DEBUG *** - Bridge:        " << settings.bridge();
-      LOG(INFO) << "*** DEBUG *** - IP Prefix Len: " << settings.ip_prefix_len();
-      LOG(INFO) << "*** DEBUG *** - MAC Address:   " << settings.mac_address();
+      // LOG(INFO) << "*** DEBUG *** - almost there -- ";
+      // LOG(INFO) << "*** DEBUG *** - IP Address:    " << settings.ip_address();
+      // LOG(INFO) << "*** DEBUG *** - Gateway:       " << settings.gateway();
+      // LOG(INFO) << "*** DEBUG *** - Bridge:        " << settings.bridge();
+      // LOG(INFO) << "*** DEBUG *** - IP Prefix Len: " << settings.ip_prefix_len();
+      // LOG(INFO) << "*** DEBUG *** - MAC Address:   " << settings.mac_address();
 
       // Tell executor it's registered and give it any queued tasks.
       ExecutorRegisteredMessage message;
@@ -1991,17 +1991,17 @@ void Slave::registerExecutor(
 
         stats.tasks[TASK_STAGING]++;
 
-        const StatusUpdate& update = protobuf::createStatusUpdate(
-              framework->id,
-              info.id(),
-              task.task_id(),
-              TASK_STARTING,
-              TaskStatus::SOURCE_SLAVE,
-              "Network settings update",
-              None(),
-              executor->id);
+        // const StatusUpdate& update = protobuf::createStatusUpdate(
+        //       framework->id,
+        //       info.id(),
+        //       task.task_id(),
+        //       TASK_STARTING,
+        //       TaskStatus::SOURCE_SLAVE,
+        //       "Network settings update",
+        //       None(),
+        //       executor->id);
 
-        send(framework->pid, update);
+        // send(framework->pid, update);
 
         RunTaskMessage message;
         message.mutable_framework_id()->MergeFrom(framework->id);
@@ -2473,6 +2473,28 @@ void Slave::forward(StatusUpdate update)
         update.set_latest_state(task->state());
       }
     }
+
+    // Let's do the peeling here...
+    if (!update.status().has_container_network_settings()) {
+      ContainerNetworkSettings settings = containerizer->network_settings(executor->containerId).get();
+      TaskStatus status;
+      status.CopyFrom(update.status());
+      status.mutable_container_network_settings()->MergeFrom(settings);
+
+      StatusUpdate newUpdate;
+      newUpdate.CopyFrom(update);
+      newUpdate.mutable_status()->MergeFrom(status);
+
+      update = newUpdate;
+    }
+
+    LOG(INFO) << "*** DEBUG *** - at the peel point -- ";
+    LOG(INFO) << "*** DEBUG *** - IP Address:    " << update.status().container_network_settings().ip_address();
+    LOG(INFO) << "*** DEBUG *** - Gateway:       " << update.status().container_network_settings().gateway();
+    LOG(INFO) << "*** DEBUG *** - Bridge:        " << update.status().container_network_settings().bridge();
+    LOG(INFO) << "*** DEBUG *** - IP Prefix Len: " << update.status().container_network_settings().ip_prefix_len();
+    LOG(INFO) << "*** DEBUG *** - MAC Address:   " << update.status().container_network_settings().mac_address();
+
   }
 
   CHECK_SOME(master);
@@ -2486,6 +2508,7 @@ void Slave::forward(StatusUpdate update)
   // update and removed the framework/executor/task. Also, slave
   // re-registration can generate updates when framework/executor/task
   // are unknown.
+
 
   // Forward the update to master.
   StatusUpdateMessage message;
