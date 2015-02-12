@@ -394,6 +394,12 @@ private:
     // Once the container is running, this saves the pid of the
     // running container.
     Option<pid_t> pid;
+
+    std::string ip_address;
+    std::string gateway;
+    std::string bridge;
+    int ip_prefix_len;
+    std::string mac_address;
   };
 
   hashmap<ContainerID, Container*> containers_;
@@ -1208,7 +1214,7 @@ Future<Nothing> DockerContainerizerProcess::update(
     return __update(containerId, _resources, container->pid.get());
   }
 
-  return docker->inspect(containers_[containerId]->name())
+  return docker->inspect(container->name())
     .then(defer(self(), &Self::_update, containerId, _resources, lambda::_1));
 #else
   return Nothing();
@@ -1219,9 +1225,9 @@ Future<Nothing> DockerContainerizerProcess::update(
 Future<Nothing> DockerContainerizerProcess::_update(
     const ContainerID& containerId,
     const Resources& _resources,
-    const Docker::Container& container)
+    const Docker::Container& docker_container)
 {
-  if (container.pid.isNone()) {
+  if (docker_container.pid.isNone()) {
     return Nothing();
   }
 
@@ -1231,9 +1237,20 @@ Future<Nothing> DockerContainerizerProcess::_update(
     return Nothing();
   }
 
-  containers_[containerId]->pid = container.pid.get();
+  Container* container = containers_[containerId];
 
-  return __update(containerId, _resources, container.pid.get());
+  // Update the pid
+  pid_t pid = docker_container.pid.get();
+  container->pid = pid;
+
+  // Update the network information
+  container->ip_address = docker_container.ip_address;
+  container->gateway = docker_container.gateway;
+  container->bridge = docker_container.bridge;
+  container->ip_prefix_len = docker_container.ip_prefix_len;
+  container->mac_address = docker_container.ip_address;
+
+  return __update(containerId, _resources, pid);
 }
 
 
