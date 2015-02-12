@@ -805,6 +805,16 @@ Future<list<Docker::Container> > Docker::__ps(
 
   // Skip the header.
   CHECK(!lines.empty());
+
+  vector<string> header_columns = strings::split(strings::trim(lines[0]), " ");
+  LOG(INFO) << "*** DEBUG *** header values: " << lines[0];
+
+  int index = -1;
+  if (header_columns[header_columns.size() - 1].compare("IPADDRESS") == 0) {
+    index = -2;
+    LOG(INFO) << "*** DEBUG *** - Running on IP patched container";
+  }
+
   lines.erase(lines.begin());
 
   list<Future<Docker::Container> > futures;
@@ -814,7 +824,9 @@ Future<list<Docker::Container> > Docker::__ps(
     // whether or not a 'prefix' was specified.
     vector<string> columns = strings::split(strings::trim(line), " ");
     // We expect the name column to be the last column from ps.
-    string name = columns[columns.size() - 1];
+    // Too bad that this is wrong for the patched docker container.
+    string name = columns[columns.size()  + index];
+    LOG(INFO) << "*** DEBUG *** Container name is " << name;
     if (prefix.isNone()) {
       futures.push_back(docker.inspect(name));
     } else if (strings::startsWith(name, prefix.get())) {
