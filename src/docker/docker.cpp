@@ -18,6 +18,12 @@
 
 #include <map>
 #include <vector>
+#include <sstream>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
 
 #include <stout/lambda.hpp>
 #include <stout/os.hpp>
@@ -809,10 +815,18 @@ Future<list<Docker::Container> > Docker::__ps(
   vector<string> header_columns = strings::split(strings::trim(lines[0]), " ");
   LOG(INFO) << "*** DEBUG *** header values: " << lines[0];
 
+  std::istringstream iss(lines[0]);
+  vector<string> headers{std::istream_iterator<string>{iss},
+      std::istream_iterator<string>{}};
+
+  foreach (const string& header, headers) {
+    LOG(INFO) << "*** DEBUG *** - header " << header;
+  }
+
   int index = -1;
-  if (header_columns[header_columns.size() - 1].compare("IPADDRESS") == 0) {
+  if (headers[headers.size() - 1].compare("IPADDRESS") == 0) {
     index = -2;
-    LOG(INFO) << "*** DEBUG *** - Running on IP patched container";
+    LOG(INFO) << "*** DEBUG *** - Running on IP patched container (" << headers[headers.size() - 2] << ")";
   }
 
   lines.erase(lines.begin());
@@ -820,9 +834,8 @@ Future<list<Docker::Container> > Docker::__ps(
   list<Future<Docker::Container> > futures;
 
   foreach (const string& line, lines) {
-    // Inspect the containers that we are interested in depending on
-    // whether or not a 'prefix' was specified.
-    vector<string> columns = strings::split(strings::trim(line), " ");
+    std::istringstream iss(line);
+    vector<string> columns{std::istream_iterator<string>{iss}, std::istream_iterator<string>{}};
     // We expect the name column to be the last column from ps.
     // Too bad that this is wrong for the patched docker container.
     string name = columns[columns.size()  + index];

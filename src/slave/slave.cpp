@@ -1964,6 +1964,15 @@ void Slave::registerExecutor(
       // TODO(idownes): Wait until this completes.
       containerizer->update(executor->containerId, executor->resources);
 
+      ContainerNetworkSettings settings = containerizer->network_settings(executor->containerId).get();
+
+      LOG(INFO) << "*** DEBUG *** - almost there -- ";
+      LOG(INFO) << "*** DEBUG *** - IP Address:    " << settings.ip_address();
+      LOG(INFO) << "*** DEBUG *** - Gateway:       " << settings.gateway();
+      LOG(INFO) << "*** DEBUG *** - Bridge:        " << settings.bridge();
+      LOG(INFO) << "*** DEBUG *** - IP Prefix Len: " << settings.ip_prefix_len();
+      LOG(INFO) << "*** DEBUG *** - MAC Address:   " << settings.mac_address();
+
       // Tell executor it's registered and give it any queued tasks.
       ExecutorRegisteredMessage message;
       message.mutable_executor_info()->MergeFrom(executor->info);
@@ -1981,6 +1990,18 @@ void Slave::registerExecutor(
                   << " of framework " << framework->id;
 
         stats.tasks[TASK_STAGING]++;
+
+        const StatusUpdate& update = protobuf::createStatusUpdate(
+              framework->id,
+              info.id(),
+              task.task_id(),
+              TASK_STARTING,
+              TaskStatus::SOURCE_SLAVE,
+              "Network settings update",
+              None(),
+              executor->id);
+
+        send(framework->pid, update);
 
         RunTaskMessage message;
         message.mutable_framework_id()->MergeFrom(framework->id);

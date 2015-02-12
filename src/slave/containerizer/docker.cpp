@@ -117,6 +117,9 @@ public:
   virtual process::Future<ResourceStatistics> usage(
       const ContainerID& containerId);
 
+  virtual process::Future<ContainerNetworkSettings> network_settings(
+      const ContainerID& containerId);
+
   virtual Future<containerizer::Termination> wait(
       const ContainerID& containerId);
 
@@ -713,6 +716,12 @@ Future<ResourceStatistics> DockerContainerizer::usage(
   return dispatch(process, &DockerContainerizerProcess::usage, containerId);
 }
 
+
+Future<ContainerNetworkSettings> DockerContainerizer::network_settings(
+    const ContainerID& containerId)
+{
+  return dispatch(process, &DockerContainerizerProcess::network_settings, containerId);
+}
 
 Future<containerizer::Termination> DockerContainerizer::wait(
     const ContainerID& containerId)
@@ -1474,6 +1483,32 @@ Future<ResourceStatistics> DockerContainerizerProcess::__usage(
   return result;
 }
 
+Future<ContainerNetworkSettings> DockerContainerizerProcess::network_settings(
+    const ContainerID& containerId)
+{
+#ifndef __linux__
+  return Failure("Does not support network_settings() on non-linux platform");
+#else
+  if (!containers_.contains(containerId)) {
+    return Failure("Unknown container: " + stringify(containerId));
+  }
+
+  Container* container = containers_[containerId];
+
+  if (container->state == Container::DESTROYING) {
+    return Failure("Container is being removed: " + stringify(containerId));
+  }
+
+  ContainerNetworkSettings settings;
+  settings.set_bridge(container->bridge);
+  settings.set_gateway(container->gateway);
+  settings.set_ip_address(container->ip_address);
+  settings.set_ip_prefix_len(container->ip_prefix_len);
+  settings.set_mac_address(container->mac_address);
+
+  return settings;
+#endif
+}
 
 Future<containerizer::Termination> DockerContainerizerProcess::wait(
     const ContainerID& containerId)

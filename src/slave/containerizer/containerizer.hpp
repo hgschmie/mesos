@@ -108,6 +108,10 @@ public:
   virtual process::Future<ResourceStatistics> usage(
       const ContainerID& containerId) = 0;
 
+  // Get network configuration
+  virtual process::Future<ContainerNetworkSettings> network_settings(
+      const ContainerID& containerId) = 0;
+
   // Wait on the container's 'Termination'. If the executor terminates, the
   // containerizer should also destroy the containerized context. The future
   // may be failed if an error occurs during termination of the executor or
