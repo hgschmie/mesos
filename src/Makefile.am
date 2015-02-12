@@ -802,7 +802,7 @@ EXTRA_DIST += deploy/mesos-deploy-env.sh.template			\
 # to EXTRA_DIST unconditionally.
 
 # Mesos JAR.
-MESOS_JAR = java/target/mesos-$(PACKAGE_VERSION).jar
+MESOS_JAR = java/target/mesos-$(PACKAGE_VERSION)-GRPN-1.jar
 MESOS_JAR_SOURCE =							\
 	$(srcdir)/java/src/org/apache/mesos/ExecutorDriver.java		\
 	$(srcdir)/java/src/org/apache/mesos/Executor.java		\
