@@ -519,7 +519,7 @@ Future<Nothing> Docker::run(
 
   string cmd = strings::join(" ", argv);
 
-  VLOG(1) << "Running " << cmd;
+  LOG(INFO) << "*** DEBUG *** Running " << cmd;
 
   map<string, string> environment;
 
@@ -551,7 +551,7 @@ Future<Nothing> Docker::kill(const string& container, bool remove) const
 {
   const string cmd = path + " kill " + container;
 
-  VLOG(1) << "Running " << cmd;
+  LOG(INFO) << "*** DEBUG *** Running " << cmd;
 
   Try<Subprocess> s = subprocess(
       cmd,
@@ -597,7 +597,7 @@ Future<Nothing> Docker::rm(
 {
   const string cmd = path + (force ? " rm -f " : " rm ") + container;
 
-  VLOG(1) << "Running " << cmd;
+  LOG(INFO) << "*** DEBUG *** Running " << cmd;
 
   Try<Subprocess> s = subprocess(
       cmd,
@@ -617,7 +617,7 @@ Future<Docker::Container> Docker::inspect(const string& container) const
 {
   const string cmd =  path + " inspect " + container;
 
-  VLOG(1) << "Running " << cmd;
+  LOG(INFO) << "*** DEBUG *** Running " << cmd;
 
   Try<Subprocess> s = subprocess(
       cmd,
@@ -723,7 +723,7 @@ Future<Nothing> Docker::logs(
     "}\n"
     "logs " + container;
 
-  VLOG(1) << "Running " << logs;
+  LOG(INFO) << "*** DEBUG *** Running " << logs;
 
   Try<Subprocess> s = subprocess(
       logs,
@@ -746,7 +746,7 @@ Future<list<Docker::Container> > Docker::ps(
 {
   string cmd = path + (all ? " ps -a" : " ps");
 
-  VLOG(1) << "Running " << cmd;
+  LOG(INFO) << "*** DEBUG *** Running " << cmd;
 
   Try<Subprocess> s = subprocess(
       cmd,
@@ -851,7 +851,7 @@ Future<Docker::Image> Docker::pull(
 
   string cmd = strings::join(" ", argv);
 
-  VLOG(1) << "Running " << cmd;
+  LOG(INFO) << "*** DEBUG *** Running " << cmd;
 
   Try<Subprocess> s = subprocess(
       path,
@@ -905,7 +905,7 @@ Future<Docker::Image> Docker::_pull(
     }
   }
   else {
-    VLOG(1) << "*** DEBUG - do a pull";
+    LOG(INFO) << "*** DEBUG *** *** DEBUG - do a pull";
   }
 
   vector<string> argv;
@@ -915,7 +915,7 @@ Future<Docker::Image> Docker::_pull(
 
   string cmd = strings::join(" ", argv);
 
-  VLOG(1) << "Running " << cmd;
+  LOG(INFO) << "*** DEBUG *** Running " << cmd;
 
   // Set HOME variable to pick up .dockercfg.
   map<string, string> environment;
@@ -952,7 +952,7 @@ Future<Docker::Image> Docker::_pull(
 
 void Docker::pullDiscarded(const Subprocess& s, const string& cmd)
 {
-  VLOG(1) << "'" << cmd << "' is being discarded";
+  LOG(INFO) << "*** DEBUG *** '" << cmd << "' is being discarded";
   os::killtree(s.pid(), SIGKILL);
 }
 

@@ -1250,6 +1250,12 @@ Future<Nothing> DockerContainerizerProcess::_update(
   container->ip_prefix_len = docker_container.ip_prefix_len;
   container->mac_address = docker_container.ip_address;
 
+  LOG(INFO) << "*** DEBUG *** - IP Address:    " << container->ip_address;
+  LOG(INFO) << "*** DEBUG *** - Gateway:       " << container->gateway;
+  LOG(INFO) << "*** DEBUG *** - Bridge:        " << container->bridge;
+  LOG(INFO) << "*** DEBUG *** - IP Prefix Len: " << container->ip_prefix_len;
+  LOG(INFO) << "*** DEBUG *** - MAC Address:   " << container->mac_address;
+
   return __update(containerId, _resources, pid);
 }
 
