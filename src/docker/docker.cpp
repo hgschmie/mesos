@@ -306,7 +306,14 @@ Try<Docker::Container> Docker::Container::create(const JSON::Object& json)
 
   LOG(INFO) << "*** DEBUG *** - MAC Address:   " << macAddress;
 
-  return Docker::Container(id, name, optionalPid, ipAddress.as<JSON::String>().value, gateway.as<JSON::String>().value, bridge.as<JSON::String>().value, ipPrefixLen.as<JSON::Number>().value, macAddress.as<JSON::String>().value);
+  return Docker::Container(id,
+             name,
+             optionalPid,
+             ipAddress.as<JSON::String>().value,
+             gateway.as<JSON::String>().value,
+             bridge.as<JSON::String>().value,
+             ipPrefixLen.as<JSON::Number>().value,
+             macAddress.as<JSON::String>().value);
 }
 
 
@@ -762,9 +769,19 @@ Future<list<Docker::Container> > Docker::ps(
     bool all,
     const Option<string>& prefix) const
 {
-  string cmd = path + (all ? " ps -a" : " ps");
+  vector<string> argv;
+  argv.push_back(path);
+  argv.push_back("ps");
 
-  LOG(INFO) << "*** DEBUG *** Running " << cmd;
+  if(all) {
+    argv.push_back("-a");
+  }
+
+  argv.push_back("--no-trunc");
+
+  string cmd = strings::join(" ", argv);
+
+  VLOG(1) << "*** DEBUG *** Running " << cmd;
 
   Try<Subprocess> s = subprocess(
       cmd,
@@ -824,34 +841,62 @@ Future<list<Docker::Container> > Docker::__ps(
   // Skip the header.
   CHECK(!lines.empty());
 
-  vector<string> header_columns = strings::split(strings::trim(lines[0]), " ");
-  LOG(INFO) << "*** DEBUG *** header values: " << lines[0];
+  // Docker has a weird "column aligned format" for ps output. The header
+  // will define the columns.
+  VLOG(1) << "*** DEBUG *** header values: " << lines[0];
 
-  std::istringstream iss(lines[0]);
-  vector<string> headers{std::istream_iterator<string>{iss},
-      std::istream_iterator<string>{}};
+  int name_index = -1;
 
-  foreach (const string& header, headers) {
-    LOG(INFO) << "*** DEBUG *** - header " << header;
+  // Construct a list of column indexes. Each column goes from
+  // index[n] to index[n+1] (exclusive).
+  vector<int> column_index;
+  column_index.push_back(0);
+
+  bool in_header = true;
+  int current_index = 0;
+  for (uint i = 1; i < lines[0].length(); ++i) {
+      if (lines[0][i] == ' ') {
+        if (in_header) {
+          in_header = false;
+          string header = lines[0].substr(current_index, i - current_index);
+          VLOG(1) << "Header Name: " << header;
+          // Found the NAMES column for the container name.
+          if(!header.compare("NAMES")) {
+            name_index = column_index.size() - 1;
+            VLOG(1) << "NAMES header index: " << name_index;
+          }
+        }
+      } else if (!in_header) {
+        in_header = true;
+        current_index = i;
+        column_index.push_back(current_index);
+      }
   }
 
-  int index = -1;
-  if (headers[headers.size() - 1].compare("IPADDRESS") == 0) {
-    index = -2;
-    LOG(INFO) << "*** DEBUG *** - Running on IP patched container (" << headers[headers.size() - 2] << ")";
-  }
+  // Push the string len at the very end to have an n+1 column for the
+  // last column.
+  column_index.push_back(lines[0].length());
 
   lines.erase(lines.begin());
 
   list<Future<Docker::Container> > futures;
 
   foreach (const string& line, lines) {
-    std::istringstream iss(line);
-    vector<string> columns{std::istream_iterator<string>{iss}, std::istream_iterator<string>{}};
-    // We expect the name column to be the last column from ps.
-    // Too bad that this is wrong for the patched docker container.
-    string name = columns[columns.size()  + index];
-    LOG(INFO) << "*** DEBUG *** Container name is " << name;
+    vector<string> columns;
+
+    // Split along the columns found from the header line. Trim off
+    // excess whitespace.
+    for (uint i = 0; i < column_index.size() - 1; ++i) {
+      columns.push_back(
+          strings::trim(
+              line.substr(column_index[i],
+                  column_index[i+1] - column_index[i])));
+    }
+
+    // Take the name from the column identified earlier.
+    string name = columns[name_index];
+    VLOG(1)<< "*** DEBUG *** Container name is " << name;
+
     if (prefix.isNone()) {
       futures.push_back(docker.inspect(name));
     } else if (strings::startsWith(name, prefix.get())) {
@@ -861,7 +906,6 @@ Future<list<Docker::Container> > Docker::__ps(
 
   return collect(futures);
 }
-
 
 Future<Docker::Image> Docker::pull(
     const string& directory,
@@ -932,8 +976,6 @@ Future<Docker::Image> Docker::_pull(
     const string& path,
     const bool recheck)
 {
-
-
   // See if the image ends with "latest". If not, check the
   // status of inspect and skip pulling if found. Otherwise,
   // always pull. -- hps
