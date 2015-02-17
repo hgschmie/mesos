@@ -692,7 +692,20 @@ Future<list<Docker::Container> > Docker::ps(
     bool all,
     const Option<string>& prefix) const
 {
-  string cmd = path + (all ? " ps -a" : " ps");
+  vector<string> argv;
+  argv.push_back(path);
+  argv.push_back("ps");
+
+  if (all) {
+    argv.push_back("-a");
+  }
+
+  // Pass --no-trunc to docker to ensure that none
+  // of the fields is truncated. Otherwise, very long
+  // columns may be cut off.
+  argv.push_back("--no-trunc");
+
+  string cmd = strings::join(" ", argv);
 
   VLOG(1) << "Running " << cmd;
 
@@ -751,18 +764,81 @@ Future<list<Docker::Container> > Docker::__ps(
 {
   vector<string> lines = strings::tokenize(output, "\n");
 
-  // Skip the header.
   CHECK(!lines.empty());
+
+  // Docker has a weird "column aligned format" for ps output. The
+  // header positions define the value columns. With the exception of
+  // the "CONTAINER ID" field, which contains a space.
+  const string header = lines[0];
+  VLOG(2) << "docker ps header: " << header;
+
+  int nameIdx = -1;
+
+  // Construct a list of column indexes. Each column goes from
+  // index[n] (inclusive) to index[n+1] (exclusive).
+  vector<uint> colIdx;
+
+  // First column starts at 0 -> parsing a header right now.
+  int currIdx = 0;
+  bool inColName = true;
+  colIdx.push_back(currIdx);
+
+  CHECK(header.length() > 10);
+
+  // Run from the start of "ID" to position after the last character
+  // to close the last header element
+  for (uint i = 10; i <= header.length(); ++i) {
+    // If line length was reached, do an unconditional
+    // "field end" check, otherwise a field ends when
+    // a space is encountered
+    if ((i == header.length()) || (header[i] == ' ')) {
+      if (inColName) {
+        inColName = false;
+        string colName = header.substr(currIdx, i - currIdx);
+        VLOG(2) << "Found docker column name: " << colName;
+        // Found the NAMES column for the container name.
+        if(!colName.compare("NAMES")) {
+          nameIdx = colIdx.size() - 1;
+          VLOG(2) << "Found NAMES column position: " << nameIdx;
+        }
+      }
+    } else if (!inColName) {
+      inColName = true;
+      currIdx = i;
+      colIdx.push_back(currIdx);
+    }
+  }
+
+  if (nameIdx == -1) {
+    return Failure("Unable to parse docker ps header '" + header + "'");
+  }
+
+  // Skip the header.
   lines.erase(lines.begin());
 
   list<Future<Docker::Container> > futures;
 
   foreach (const string& line, lines) {
+    vector<string> cols;
+
+    // Split along the columns found from the header line. Trim off
+    // excess whitespace.
+    for (uint i = 0; i < colIdx.size(); ++i) {
+      uint charCount = (i != colIdx.size() - 1)
+          // Chars from this to the next column
+          ? colIdx[i+1] - colIdx[i]
+          // Last column: All the way to the end of the line
+          : line.length() - colIdx[i] - 1;
+
+      cols.push_back(strings::trim(line.substr(colIdx[i], charCount)));
+    }
+
+    // Take the name from the column identified earlier.
+    string name = cols[nameIdx];
+    VLOG(2)<< "Found container name: " << name;
+
     // Inspect the containers that we are interested in depending on
     // whether or not a 'prefix' was specified.
-    vector<string> columns = strings::split(strings::trim(line), " ");
-    // We expect the name column to be the last column from ps.
-    string name = columns[columns.size() - 1];
     if (prefix.isNone()) {
       futures.push_back(docker.inspect(name));
     } else if (strings::startsWith(name, prefix.get())) {
