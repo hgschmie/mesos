@@ -188,6 +188,12 @@ private:
       const process::Subprocess& s,
       const std::string& cmd);
 
+  process::Future<Image> pullInternal(
+      const std::string& directory,
+      const std::string& image,
+      bool force = false,
+      bool checkLatest = false) const;
+
   const std::string path;
 };
 

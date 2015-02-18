@@ -779,6 +779,16 @@ Future<Docker::Image> Docker::pull(
     const string& image,
     bool force) const
 {
+  // First time around, check for :latest tag unconditionally.
+  return pullInternal(directory, image, force, true);
+}
+
+Future<Docker::Image> Docker::pullInternal(
+    const string& directory,
+    const string& image,
+    bool force,
+    bool checkLatest) const
+{
   vector<string> argv;
 
   string dockerImage = image;
@@ -794,7 +804,19 @@ Future<Docker::Image> Docker::pull(
     dockerImage += ":latest";
   }
 
-  if (force) {
+  // If first time around, see if we need to unconditionally pull
+  // because the image tag is 'latest'.
+  if (checkLatest) {
+    // See if the image ends with "latest". If yes, always pull,
+    // similar to "force". This ensures that the local copy of the
+    // image really is "latest".
+    std::size_t pos = image.rfind(":latest");
+
+    // If the last seven chars are ":latest", then force pull
+    checkLatest = (pos == (image.length() - 7));
+  }
+
+  if (force || checkLatest) {
     // Skip inspect and docker pull the image.
     return Docker::__pull(*this, directory, image, path);
   }
@@ -924,7 +946,7 @@ Future<Docker::Image> Docker::___pull(
   // the image should be present (see Docker::pull).
   // TODO(benh): Factor out inspect code from Docker::pull to be
   // reused rather than this (potentially infinite) recursive call.
-  return docker.pull(directory, image);
+  return docker.pullInternal(directory, image);
 }
 
 
